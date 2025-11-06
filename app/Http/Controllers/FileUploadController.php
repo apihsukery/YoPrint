@@ -13,6 +13,7 @@ class FileUploadController extends Controller
     public function index()
     {
         $files = FileUpload::orderBy('created_at', 'desc')->get();
+        $files = FileUploadResource::collection($files);
         return view('welcome', compact('files'));
     }
 

@@ -39,26 +39,18 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200" id="fileTableBody">
                         @forelse($files as $file)
-                        <tr class="hover:bg-gray-50" data-file-id="{{ $file->id }}">
+                        <tr class="hover:bg-gray-50" data-file-id="{{ $file['id'] }}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <span class="time-display" data-timestamp="{{ $file->created_at->timestamp }}">
-                                    {{ $file->created_at->format('Y-m-d g:ia') }} (<span class="relative-time">{{ $file->created_at->diffForHumans() }}</span>)
+                                <span class="time-display" data-timestamp="{{ $file['created_at_timestamp'] }}">
+                                    {{ $file['created_at'] }} (<span class="relative-time">{{ $file['relative_time'] }}</span>)
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $file->original_name }}
+                                {{ $file['original_name'] }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                @php
-                                    $statusColors = [
-                                        'pending' => 'bg-gray-100 text-gray-800',
-                                        'processing' => 'bg-blue-100 text-blue-800',
-                                        'failed' => 'bg-red-100 text-red-800',
-                                        'completed' => 'bg-green-100 text-green-800',
-                                    ];
-                                @endphp
-                                <span class="status-badge px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColors[$file->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                    {{ $file->status }}
+                                <span class="status-badge px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $file['status_color'] }}">
+                                    {{ $file['status'] }}
                                 </span>
                             </td>
                         </tr>
