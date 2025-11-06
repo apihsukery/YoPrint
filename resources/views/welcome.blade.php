@@ -37,85 +37,38 @@
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-gray-200" id="fileTableBody">
+                        @forelse($files as $file)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:30:45
+                                <span class="time-display" data-timestamp="{{ $file->created_at->timestamp }}">
+                                    {{ $file->created_at->format('Y-m-d g:ia') }} (<span class="relative-time">{{ $file->created_at->diffForHumans() }}</span>)
+                                </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                document_001.pdf
+                                {{ $file->original_name }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    completed
+                                @php
+                                    $statusColors = [
+                                        'pending' => 'bg-gray-100 text-gray-800',
+                                        'processing' => 'bg-blue-100 text-blue-800',
+                                        'failed' => 'bg-red-100 text-red-800',
+                                        'completed' => 'bg-green-100 text-green-800',
+                                    ];
+                                @endphp
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColors[$file->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                    {{ $file->status }}
                                 </span>
                             </td>
                         </tr>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:32:12
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                image_002.jpg
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    processing
-                                </span>
+                        @empty
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
+                                No files uploaded yet
                             </td>
                         </tr>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:35:28
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                report_003.xlsx
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                    pending
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:38:05
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                data_004.csv
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                    failed
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:40:33
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                presentation_005.pptx
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    completed
-                                </span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                2025-11-05 10:42:18
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                archive_006.zip
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    processing
-                                </span>
-                            </td>
-                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -196,16 +149,14 @@
             e.stopPropagation(); // Prevent triggering dropZone click
 
             if (selectedFile) {
+                // Disable button during upload
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+
                 // Create FormData to send file
                 const formData = new FormData();
                 formData.append('file', selectedFile);
 
-                // TODO: Replace with your actual upload endpoint
-                // For now, just show a message
-                alert(`Ready to upload: ${selectedFile.name}\n\nImplement your upload logic here.`);
-
-                // Example upload code (uncomment and modify when ready):
-                /*
                 fetch('/upload', {
                     method: 'POST',
                     body: formData,
@@ -215,20 +166,80 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    console.log('Upload successful:', data);
-                    // Reset the form
-                    selectedFile = null;
-                    fileInput.value = '';
-                    dropZoneText.textContent = 'Select file/Drag and drop (CSV only)';
-                    uploadBtn.disabled = true;
+                    if (data.success) {
+                        // Reset the form
+                        selectedFile = null;
+                        fileInput.value = '';
+                        dropZoneText.textContent = 'Select file/Drag and drop (CSV only)';
+                        uploadBtn.textContent = 'Upload File';
+
+                        // Reload page to show new file
+                        window.location.reload();
+                    } else {
+                        alert('Upload failed: ' + data.message);
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = 'Upload File';
+                    }
                 })
                 .catch(error => {
                     console.error('Upload error:', error);
                     alert('Upload failed. Please try again.');
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = 'Upload File';
                 });
-                */
             }
         });
+
+        // Real-time relative time update
+        function getRelativeTime(timestamp) {
+            const now = Math.floor(Date.now() / 1000); // Current time in seconds
+            const diff = now - timestamp; // Difference in seconds
+
+            const minute = 60;
+            const hour = minute * 60;
+            const day = hour * 24;
+            const week = day * 7;
+            const month = day * 30;
+            const year = day * 365;
+
+            if (diff < minute) {
+                return diff <= 1 ? '1 second ago' : `${diff} seconds ago`;
+            } else if (diff < hour) {
+                const minutes = Math.floor(diff / minute);
+                return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`;
+            } else if (diff < day) {
+                const hours = Math.floor(diff / hour);
+                return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+            } else if (diff < week) {
+                const days = Math.floor(diff / day);
+                return days === 1 ? '1 day ago' : `${days} days ago`;
+            } else if (diff < month) {
+                const weeks = Math.floor(diff / week);
+                return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+            } else if (diff < year) {
+                const months = Math.floor(diff / month);
+                return months === 1 ? '1 month ago' : `${months} months ago`;
+            } else {
+                const years = Math.floor(diff / year);
+                return years === 1 ? '1 year ago' : `${years} years ago`;
+            }
+        }
+
+        function updateRelativeTimes() {
+            document.querySelectorAll('.time-display').forEach(element => {
+                const timestamp = parseInt(element.getAttribute('data-timestamp'));
+                const relativeTimeElement = element.querySelector('.relative-time');
+                if (relativeTimeElement) {
+                    relativeTimeElement.textContent = getRelativeTime(timestamp);
+                }
+            });
+        }
+
+        // Update relative times immediately on page load
+        updateRelativeTimes();
+
+        // Update relative times every 60 seconds
+        setInterval(updateRelativeTimes, 60000);
     </script>
 </body>
 </html>
