@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessCsvFile;
 use App\Models\FileUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -37,6 +38,9 @@ class FileUploadController extends Controller
                 'status' => 'pending',
             ]);
 
+            // Dispatch job to process CSV file in background
+            ProcessCsvFile::dispatch($fileUpload);
+
             return response()->json([
                 'success' => true,
                 'message' => 'File uploaded successfully',
@@ -49,5 +53,18 @@ class FileUploadController extends Controller
                 'message' => 'Upload failed: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function status($id)
+    {
+        $fileUpload = FileUpload::findOrFail($id);
+
+        return response()->json([
+            'id' => $fileUpload->id,
+            'status' => $fileUpload->status,
+            'original_name' => $fileUpload->original_name,
+            'created_at' => $fileUpload->created_at->format('Y-m-d g:ia'),
+            'relative_time' => $fileUpload->created_at->diffForHumans(),
+        ]);
     }
 }

@@ -39,7 +39,7 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200" id="fileTableBody">
                         @forelse($files as $file)
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50" data-file-id="{{ $file->id }}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 <span class="time-display" data-timestamp="{{ $file->created_at->timestamp }}">
                                     {{ $file->created_at->format('Y-m-d g:ia') }} (<span class="relative-time">{{ $file->created_at->diffForHumans() }}</span>)
@@ -57,7 +57,7 @@
                                         'completed' => 'bg-green-100 text-green-800',
                                     ];
                                 @endphp
-                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColors[$file->status] ?? 'bg-gray-100 text-gray-800' }}">
+                                <span class="status-badge px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColors[$file->status] ?? 'bg-gray-100 text-gray-800' }}">
                                     {{ $file->status }}
                                 </span>
                             </td>
@@ -240,6 +240,67 @@
 
         // Update relative times every 60 seconds
         setInterval(updateRelativeTimes, 60000);
+
+        // Poll for status updates
+        const statusPollers = new Map();
+
+        function pollFileStatus(fileId, row) {
+            // Check if already polling
+            if (statusPollers.has(fileId)) {
+                return;
+            }
+
+            const pollInterval = setInterval(() => {
+                fetch(`/upload/status/${fileId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Find status badge in the row
+                        const statusBadge = row.querySelector('.status-badge');
+                        if (statusBadge && statusBadge.textContent.trim() !== data.status) {
+                            // Update status badge
+                            statusBadge.textContent = data.status;
+
+                            // Update badge color classes
+                            statusBadge.classList.remove('bg-gray-100', 'text-gray-800', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+
+                            const statusColors = {
+                                'pending': ['bg-gray-100', 'text-gray-800'],
+                                'processing': ['bg-blue-100', 'text-blue-800'],
+                                'failed': ['bg-red-100', 'text-red-800'],
+                                'completed': ['bg-green-100', 'text-green-800']
+                            };
+
+                            if (statusColors[data.status]) {
+                                statusBadge.classList.add(...statusColors[data.status]);
+                            }
+                        }
+
+                        // Stop polling if completed or failed
+                        if (data.status === 'completed' || data.status === 'failed') {
+                            clearInterval(pollInterval);
+                            statusPollers.delete(fileId);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Status poll error:', error);
+                    });
+            }, 3000); // Poll every 3 seconds
+
+            statusPollers.set(fileId, pollInterval);
+        }
+
+        // Start polling for files that are pending or processing
+        document.querySelectorAll('tbody tr').forEach(row => {
+            const statusBadge = row.querySelector('.status-badge');
+            if (statusBadge) {
+                const status = statusBadge.textContent.trim();
+                const fileId = row.getAttribute('data-file-id');
+
+                if (fileId && (status === 'pending' || status === 'processing')) {
+                    pollFileStatus(fileId, row);
+                }
+            }
+        });
     </script>
 </body>
 </html>
