@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\FileUploadResource;
 use App\Jobs\ProcessCsvFile;
 use App\Models\FileUpload;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class FileUploadController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'File uploaded successfully',
-                'file' => $fileUpload,
+                'file' => new FileUploadResource($fileUpload),
             ], 200);
 
         } catch (\Exception $e) {
@@ -58,13 +59,6 @@ class FileUploadController extends Controller
     public function status($id)
     {
         $fileUpload = FileUpload::findOrFail($id);
-
-        return response()->json([
-            'id' => $fileUpload->id,
-            'status' => $fileUpload->status,
-            'original_name' => $fileUpload->original_name,
-            'created_at' => $fileUpload->created_at->format('Y-m-d g:ia'),
-            'relative_time' => $fileUpload->created_at->diffForHumans(),
-        ]);
+        return new FileUploadResource($fileUpload);
     }
 }
